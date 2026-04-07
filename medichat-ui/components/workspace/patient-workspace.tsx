@@ -1,6 +1,12 @@
 "use client";
 
-import { Microphone, MicrophoneSlash, StopCircle } from "@phosphor-icons/react";
+import {
+  List,
+  Microphone,
+  MicrophoneSlash,
+  StopCircle,
+  X,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +22,7 @@ import {
   type MedicalProfile,
   type MedicationSchedule,
   type ReminderEvent,
+  type SidebarSummary,
   type WorkspaceBootstrapResponse,
   type WorkspaceMode,
 } from "@/lib/api";
@@ -114,6 +121,126 @@ function mergeVoiceDraft(
   return `${baseValue}${needsSeparator ? " " : ""}${spokenText}`.trim();
 }
 
+function WorkspaceNavigation({
+  currentUser,
+  selectedSection,
+  liveSidebarSummary,
+  onClose,
+  onHide,
+  onLogout,
+  onSectionSelect,
+  mobile = false,
+}: {
+  currentUser: AuthUser;
+  selectedSection: WorkspaceSection;
+  liveSidebarSummary: SidebarSummary;
+  onClose?: () => void;
+  onHide?: () => void;
+  onLogout: () => void;
+  onSectionSelect: (section: WorkspaceSection) => void;
+  mobile?: boolean;
+}) {
+  return (
+    <div className="flex h-full flex-col bg-sidebar">
+      <div className="flex min-h-16 items-center justify-between border-b border-border px-4 sm:px-5">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">
+            Patient Workspace
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            @{currentUser.username}
+          </p>
+        </div>
+        {mobile ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Close sections menu"
+          >
+            <X weight="bold" />
+          </Button>
+        ) : onHide ? (
+          <Button type="button" variant="outline" size="sm" onClick={onHide}>
+            Hide
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
+        {SECTION_CONFIG.map((item) => (
+          <button
+            key={item.section}
+            type="button"
+            onClick={() => onSectionSelect(item.section)}
+            className={cn(
+              "w-full rounded-3xl border px-3 py-3 text-left transition-colors sm:px-4",
+              selectedSection === item.section
+                ? "border-primary/30 bg-primary/10"
+                : "border-transparent bg-background hover:border-border hover:bg-accent/60"
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {item.short}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium leading-tight text-foreground">
+                  {item.label}
+                </p>
+                {item.section === "schedule_appointment" &&
+                liveSidebarSummary.nextAppointment ? (
+                  <p className="truncate pt-1 text-xs text-muted-foreground">
+                    Next:{" "}
+                    {formatDateTime(
+                      liveSidebarSummary.nextAppointment.scheduledFor
+                    )}
+                  </p>
+                ) : null}
+                {item.section === "medication_tracking" &&
+                liveSidebarSummary.nextMedicationReminder ? (
+                  <p className="truncate pt-1 text-xs text-muted-foreground">
+                    Next:{" "}
+                    {formatDateTime(
+                      liveSidebarSummary.nextMedicationReminder.scheduledFor
+                    )}
+                  </p>
+                ) : null}
+              </div>
+              {item.section === "schedule_appointment" &&
+              liveSidebarSummary.appointmentOverdueCount > 0 ? (
+                <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
+                  {liveSidebarSummary.appointmentOverdueCount}
+                </span>
+              ) : null}
+              {item.section === "medication_tracking" &&
+              liveSidebarSummary.medicationOverdueCount > 0 ? (
+                <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
+                  {liveSidebarSummary.medicationOverdueCount}
+                </span>
+              ) : null}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {mobile ? (
+        <div className="border-t border-border p-3 sm:p-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onLogout}
+            className="w-full justify-center"
+          >
+            Logout
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ReminderToastStack({
   reminders,
   onOpen,
@@ -124,7 +251,7 @@ function ReminderToastStack({
   onDismiss: (id: string) => void;
 }) {
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-3">
+    <div className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+10rem)] z-50 mx-auto flex max-w-md flex-col gap-3 sm:inset-x-auto sm:right-4 sm:top-4 sm:bottom-auto sm:mx-0 sm:max-w-sm">
       {reminders.map((reminder) => (
         <div
           key={reminder.id}
@@ -135,7 +262,7 @@ function ReminderToastStack({
             {formatDateTime(reminder.scheduledFor)}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{reminder.detail}</p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button size="sm" onClick={() => onOpen(reminder)}>
               View details
             </Button>
@@ -165,9 +292,9 @@ function ReminderModal({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-      <Card className="w-full max-w-lg border border-border/60 bg-card shadow-xl">
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center sm:px-4">
+      <Card className="max-h-[85svh] w-full rounded-t-[1.75rem] border border-border/60 bg-card shadow-xl sm:max-w-lg sm:rounded-4xl">
+        <CardHeader className="flex flex-col items-start justify-between gap-3 border-b border-border/60 px-4 pb-4 sm:flex-row sm:gap-4 sm:px-6">
           <div>
             <CardTitle>{reminder.title}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -177,11 +304,16 @@ function ReminderModal({
               )}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={onClose}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            className="self-start"
+          >
             Close
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
+        <CardContent className="max-h-[60svh] space-y-3 overflow-y-auto px-4 pb-5 text-sm text-muted-foreground sm:px-6">
           {appointment ? (
             <>
               <p>Status: {appointment.status}</p>
@@ -240,6 +372,7 @@ export function PatientWorkspace() {
   const [profileRefreshing, setProfileRefreshing] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [reminderClock, setReminderClock] = useState(() => new Date());
   const [reminders, setReminders] = useState<ReminderEvent[]>([]);
   const [activeReminder, setActiveReminder] = useState<ReminderEvent | null>(null);
@@ -393,6 +526,7 @@ export function PatientWorkspace() {
   async function handleLogout() {
     try {
       stopListening();
+      setMobileNavOpen(false);
       await apiFetch("/auth/logout", { method: "POST" });
     } finally {
       router.replace("/login");
@@ -460,6 +594,11 @@ export function PatientWorkspace() {
     }
   }
 
+  function handleSectionSelect(section: WorkspaceSection) {
+    setSelectedSection(section);
+    setMobileNavOpen(false);
+  }
+
   function handleVoiceToggle() {
     if (!activeMode || voiceButtonDisabled) {
       return;
@@ -481,7 +620,7 @@ export function PatientWorkspace() {
 
   if (loadingWorkspace) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background px-6 text-center text-sm text-muted-foreground">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-6 text-center text-sm text-muted-foreground">
         Loading the patient workspace...
       </div>
     );
@@ -501,76 +640,88 @@ export function PatientWorkspace() {
       : null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-      <aside className={cn("flex flex-col border-r border-border bg-sidebar transition-all duration-300", sidebarCollapsed ? "w-0 overflow-hidden" : "w-72")}>
-        <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">Patient Workspace</p>
-            <p className="truncate text-xs text-muted-foreground">@{currentUser.username}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setSidebarCollapsed(true)}>Hide</Button>
-        </div>
-        <div className="flex-1 space-y-2 overflow-y-auto p-3">
-          {SECTION_CONFIG.map((item) => (
-            <button
-              key={item.section}
-              onClick={() => setSelectedSection(item.section)}
-              className={cn(
-                "w-full rounded-3xl border px-4 py-3 text-left transition-colors",
-                selectedSection === item.section
-                  ? "border-primary/30 bg-primary/10"
-                  : "border-transparent bg-background hover:border-border hover:bg-accent/60"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {item.short}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{item.label}</p>
-                  {item.section === "schedule_appointment" && liveSidebarSummary.nextAppointment ? (
-                    <p className="truncate text-xs text-muted-foreground">
-                      Next: {formatDateTime(liveSidebarSummary.nextAppointment.scheduledFor)}
-                    </p>
-                  ) : null}
-                  {item.section === "medication_tracking" && liveSidebarSummary.nextMedicationReminder ? (
-                    <p className="truncate text-xs text-muted-foreground">
-                      Next: {formatDateTime(liveSidebarSummary.nextMedicationReminder.scheduledFor)}
-                    </p>
-                  ) : null}
-                </div>
-                {item.section === "schedule_appointment" && liveSidebarSummary.appointmentOverdueCount > 0 ? (
-                  <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
-                    {liveSidebarSummary.appointmentOverdueCount}
-                  </span>
-                ) : null}
-                {item.section === "medication_tracking" && liveSidebarSummary.medicationOverdueCount > 0 ? (
-                  <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
-                    {liveSidebarSummary.medicationOverdueCount}
-                  </span>
-                ) : null}
-              </div>
-            </button>
-          ))}
-        </div>
+    <div className="flex h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-background text-foreground">
+      <div
+        className={cn(
+          "fixed inset-0 z-30 bg-background/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
+          mobileNavOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        onClick={() => setMobileNavOpen(false)}
+      />
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-[min(21rem,calc(100vw-1rem))] max-w-full border-r border-border shadow-xl transition-transform duration-300 lg:hidden",
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <WorkspaceNavigation
+          currentUser={currentUser}
+          selectedSection={selectedSection}
+          liveSidebarSummary={liveSidebarSummary}
+          onClose={() => setMobileNavOpen(false)}
+          onLogout={handleLogout}
+          onSectionSelect={handleSectionSelect}
+          mobile
+        />
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-4">
-          {sidebarCollapsed ? (
-            <Button variant="outline" size="sm" onClick={() => setSidebarCollapsed(false)}>
-              Menu
+      <aside
+        className={cn(
+          "hidden border-r border-border bg-sidebar transition-all duration-300 lg:flex lg:flex-col",
+          sidebarCollapsed ? "lg:w-0 lg:overflow-hidden lg:border-r-0" : "lg:w-72 xl:w-80"
+        )}
+      >
+        <WorkspaceNavigation
+          currentUser={currentUser}
+          selectedSection={selectedSection}
+          liveSidebarSummary={liveSidebarSummary}
+          onHide={() => setSidebarCollapsed(true)}
+          onLogout={handleLogout}
+          onSectionSelect={handleSectionSelect}
+        />
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 border-b border-border px-3 py-3 sm:px-4 lg:min-h-16 lg:flex-nowrap lg:items-center lg:py-0">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileNavOpen(true)}
+              className="lg:hidden"
+            >
+              <List weight="bold" />
+              Sections
             </Button>
-          ) : null}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{activeConfig?.label}</p>
-            <p className="truncate text-xs text-muted-foreground">{activeConfig?.description}</p>
+            {sidebarCollapsed ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSidebarCollapsed(false)}
+                className="hidden lg:inline-flex"
+              >
+                Menu
+              </Button>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                {activeConfig?.label}
+              </p>
+              <p className="pt-1 text-xs leading-relaxed text-muted-foreground">
+                {activeConfig?.description}
+              </p>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="hidden items-center gap-2 lg:ml-auto lg:flex">
             <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               @{currentUser.username}
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>Logout</Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              Logout
+            </Button>
           </div>
         </header>
 
@@ -580,18 +731,22 @@ export function PatientWorkspace() {
           </div>
         ) : null}
 
-        <main className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="mx-auto flex max-w-5xl flex-col gap-4">
-            {selectedSection === "schedule_appointment" ? <AppointmentSummary appointments={appointments} /> : null}
-            {selectedSection === "medication_tracking" ? <MedicationSummary medications={medications} /> : null}
+        <main className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 sm:gap-4">
+            {selectedSection === "schedule_appointment" ? (
+              <AppointmentSummary appointments={appointments} />
+            ) : null}
+            {selectedSection === "medication_tracking" ? (
+              <MedicationSummary medications={medications} />
+            ) : null}
             {selectedSection === "medical_profile" ? (
               <MedicalProfilePanel profile={medicalProfile} />
             ) : (
               <Card className="border border-border/60 bg-card/95 shadow-sm">
-                <CardHeader>
+                <CardHeader className="px-4 sm:px-6">
                   <CardTitle>{activeConfig?.label}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 px-4 sm:px-6">
                   {activeMessages.length === 0 ? (
                     <EmptyState
                       title={`Start ${activeConfig?.label}`}
@@ -608,14 +763,19 @@ export function PatientWorkspace() {
         </main>
 
         {activeMode ? (
-          <footer className="shrink-0 border-t border-border bg-background px-4 py-4">
-            <div className="mx-auto max-w-5xl">
+          <footer
+            className="shrink-0 border-t border-border bg-background px-3 pt-3 sm:px-4 sm:pt-4"
+            style={{
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)",
+            }}
+          >
+            <div className="mx-auto w-full max-w-5xl">
               {panelError ? (
                 <div className="mb-3 rounded-3xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
                   {panelError}
                 </div>
               ) : null}
-              <div className="rounded-3xl border border-border bg-card px-4 py-3 shadow-sm">
+              <div className="rounded-3xl border border-border bg-card px-3 py-3 shadow-sm sm:px-4">
                 <textarea
                   ref={textareaRef}
                   rows={1}
@@ -629,10 +789,10 @@ export function PatientWorkspace() {
                   }}
                   placeholder={activeConfig?.placeholder}
                   disabled={Boolean(sendingMode) || isVoiceListeningForActiveMode}
-                  className="max-h-[200px] w-full resize-none overflow-y-auto bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
+                  className="min-h-[84px] max-h-[200px] w-full resize-none overflow-y-auto bg-transparent text-base leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50 sm:min-h-0 sm:text-sm"
                 />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="space-y-1">
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="min-w-0 space-y-1">
                     <p
                       aria-live="polite"
                       className={cn(
@@ -650,11 +810,10 @@ export function PatientWorkspace() {
                       Press Enter to send and Shift+Enter for a new line.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-none">
                     <Button
                       type="button"
                       variant={isVoiceListeningForActiveMode ? "destructive" : "outline"}
-                      size="sm"
                       onClick={handleVoiceToggle}
                       disabled={voiceButtonDisabled}
                       aria-pressed={isVoiceListeningForActiveMode}
@@ -663,6 +822,7 @@ export function PatientWorkspace() {
                           ? "Stop voice input"
                           : "Start voice input"
                       }
+                      className="w-full justify-center sm:w-auto"
                     >
                       {!isVoiceSupported ? (
                         <MicrophoneSlash weight="fill" />
@@ -671,7 +831,12 @@ export function PatientWorkspace() {
                       ) : (
                         <Microphone weight="fill" />
                       )}
-                      {isVoiceListeningForActiveMode ? "Stop voice" : "Voice input"}
+                      <span className="sm:hidden">
+                        {isVoiceListeningForActiveMode ? "Stop" : "Voice"}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {isVoiceListeningForActiveMode ? "Stop voice" : "Voice input"}
+                      </span>
                     </Button>
                     <Button
                       onClick={() => void handleSend()}
@@ -680,8 +845,9 @@ export function PatientWorkspace() {
                         Boolean(sendingMode) ||
                         isVoiceListeningForActiveMode
                       }
+                      className="w-full justify-center sm:w-auto"
                     >
-                    {sendingMode ? "Working..." : "Send"}
+                      {sendingMode ? "Working..." : "Send"}
                     </Button>
                   </div>
                 </div>

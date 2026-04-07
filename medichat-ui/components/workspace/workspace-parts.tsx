@@ -104,16 +104,16 @@ export function MessageList({ messages }: { messages: ConversationMessage[] }) {
         >
           <div
             className={cn(
-              "max-w-[78%] rounded-3xl px-4 py-3 text-sm leading-relaxed shadow-sm",
+              "max-w-[92%] rounded-3xl px-4 py-3 text-sm leading-relaxed shadow-sm sm:max-w-[86%] lg:max-w-[78%]",
               message.role === "user"
                 ? "rounded-br-md bg-primary text-primary-foreground"
                 : "rounded-bl-md border border-border bg-card text-card-foreground"
             )}
           >
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
             <p
               className={cn(
-                "mt-2 text-[11px]",
+                "mt-2 text-[10px] sm:text-[11px]",
                 message.role === "user"
                   ? "text-primary-foreground/70"
                   : "text-muted-foreground"
@@ -137,7 +137,7 @@ export function EmptyState({
 }) {
   return (
     <Card className="border-dashed border-border/70 bg-muted/20 shadow-none">
-      <CardHeader>
+      <CardHeader className="px-4 sm:px-6">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
@@ -156,13 +156,13 @@ export function AppointmentSummary({
 
   return (
     <Card className="border border-border/60 bg-card/95 shadow-sm">
-      <CardHeader>
+      <CardHeader className="px-4 sm:px-6">
         <CardTitle>Upcoming Appointments</CardTitle>
         <CardDescription>
           Stored appointments appear here and feed the in-page reminders.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 sm:px-6">
         {scheduled.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No appointments have been scheduled yet.
@@ -171,14 +171,16 @@ export function AppointmentSummary({
           scheduled.slice(0, 4).map((appointment) => (
             <div
               key={appointment.id}
-              className="rounded-3xl border border-border bg-background px-4 py-3"
+              className="rounded-3xl border border-border bg-background px-3 py-3 sm:px-4"
             >
-              <p className="font-medium text-foreground">{appointment.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="break-words font-medium text-foreground">
+                {appointment.title}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 {formatDateTime(appointment.scheduledFor, appointment.timezone)}
               </p>
               {appointment.notes ? (
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 break-words text-sm text-muted-foreground">
                   {appointment.notes}
                 </p>
               ) : null}
@@ -199,13 +201,13 @@ export function MedicationSummary({
 
   return (
     <Card className="border border-border/60 bg-card/95 shadow-sm">
-      <CardHeader>
+      <CardHeader className="px-4 sm:px-6">
         <CardTitle>Medication Schedules</CardTitle>
         <CardDescription>
           Daily, weekly, and seldom reminder schedules are shown here.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 sm:px-6">
         {activeSchedules.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No medication reminders have been saved yet.
@@ -214,13 +216,13 @@ export function MedicationSummary({
           activeSchedules.slice(0, 5).map((schedule) => (
             <div
               key={schedule.id}
-              className="rounded-3xl border border-border bg-background px-4 py-3"
+              className="rounded-3xl border border-border bg-background px-3 py-3 sm:px-4"
             >
-              <p className="font-medium text-foreground">
+              <p className="break-words font-medium text-foreground">
                 {schedule.medicationName}
                 {schedule.dosage ? ` · ${schedule.dosage}` : ""}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 break-words text-sm leading-relaxed text-muted-foreground">
                 {schedule.scheduleType === "daily"
                   ? `Every day at ${schedule.times.join(", ")}`
                   : schedule.scheduleType === "weekly"
@@ -230,7 +232,7 @@ export function MedicationSummary({
                         .join(", ")}
               </p>
               {schedule.notes ? (
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 break-words text-sm text-muted-foreground">
                   {schedule.notes}
                 </p>
               ) : null}
@@ -246,15 +248,15 @@ export function MedicalProfilePanel({ profile }: { profile: MedicalProfile | nul
   const entries = profile ? Object.entries(profile.profile || {}) : [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <Card className="border border-border/60 bg-card/95 shadow-sm">
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle>Patient Summary</CardTitle>
           <CardDescription>
             This profile is regenerated every five patient prompts.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
             {profile?.summary || "No medical profile has been generated yet."}
           </p>
@@ -268,12 +270,12 @@ export function MedicalProfilePanel({ profile }: { profile: MedicalProfile | nul
 
       {entries.length === 0 ? null : entries.map(([section, value]) => (
         <Card key={section} className="border border-border/60 bg-card/95 shadow-sm">
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle className="capitalize">
               {section.replace(/_/g, " ")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {Array.isArray(value) ? (
               <div className="flex flex-wrap gap-2">
                 {value.length > 0 ? value.map((item, index) => (
@@ -288,7 +290,7 @@ export function MedicalProfilePanel({ profile }: { profile: MedicalProfile | nul
                 )}
               </div>
             ) : (
-              <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
+              <pre className="overflow-x-auto rounded-3xl bg-muted/35 p-3 text-xs text-muted-foreground sm:text-sm">
                 {JSON.stringify(value, null, 2)}
               </pre>
             )}
